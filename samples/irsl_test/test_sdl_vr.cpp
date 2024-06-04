@@ -200,11 +200,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if ( !vr::VRCompositor() ) {
-        printf( "Compositor initialization failed. See log file for details\n" );
-        return 2;
-    }
-
     m_pHMD->GetRecommendedRenderTargetSize( &nWidth, &nHeight );
     printf("width x height = %d x %d\n", nWidth, nHeight);
 
@@ -326,6 +321,11 @@ int main(int argc, char **argv)
     // copy frame buffer
     SetupCompanionWindow();
 
+    if ( !vr::VRCompositor() ) {
+        printf( "Compositor initialization failed. See log file for details\n" );
+        return 2;
+    }
+
     long cntr = 0;
     while(true) {
         int gl_w = nWidth;
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
                          GL_RGB, GL_UNSIGNED_BYTE, ptr );
         glBindTexture( GL_TEXTURE_2D, 0 );
 
-        glFinish();
+        //glFinish();
 
         SDL_GL_SwapWindow( m_pCompanionWindow );
         render();
@@ -359,13 +359,19 @@ int main(int argc, char **argv)
         //glClearColor( 0, 0, 0, 1 );
         //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+        //glFlush();
+        //glFinish();
+
         // >> OpenVR
-        vr::Texture_t leftEyeTexture = {(void*)(uintptr_t)m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-        vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
+        vr::Texture_t leftEyeTexture =  {(void*)(uintptr_t)m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+        vr::VRCompositor()->Submit(vr::Eye_Left,  &leftEyeTexture );
+        vr::Texture_t rightEyeTexture = {(void*)(uintptr_t)m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+        vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture );
         // << OpenVR
 
-        glFlush();
-        glFinish();
+        printf("count = %d\n", vr::k_unMaxTrackedDeviceCount);
+        vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
+        vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
     }
 
     return 0;
