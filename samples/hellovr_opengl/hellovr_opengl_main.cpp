@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
+#include <vector>
 
 #include <openvr.h>
 
@@ -42,26 +43,6 @@ void ThreadSleep( unsigned long nMilliseconds )
     usleep( nMilliseconds * 1000 );
 #endif
 }
-
-class CGLRenderModel
-{
-public:
-    CGLRenderModel( const std::string & sRenderModelName );
-    ~CGLRenderModel();
-
-    bool BInit( const vr::RenderModel_t & vrModel, const vr::RenderModel_TextureMap_t & vrDiffuseTexture );
-    void Cleanup();
-    void Draw();
-    const std::string & GetName() const { return m_sModelName; }
-
-private:
-    GLuint m_glVertBuffer;
-    GLuint m_glIndexBuffer;
-    GLuint m_glVertArray;
-    GLuint m_glTexture;
-    GLsizei m_unVertexCount;
-    std::string m_sModelName;
-};
 
 static bool g_bPrintf = true;
 
@@ -125,24 +106,12 @@ private:
     std::string m_strDisplay;
     vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
     Matrix4 m_rmat4DevicePose[ vr::k_unMaxTrackedDeviceCount ];
-#if 0
-    struct ControllerInfo_t
-    {
-        vr::VRInputValueHandle_t m_source = vr::k_ulInvalidInputValueHandle;
-        vr::VRActionHandle_t m_actionPose = vr::k_ulInvalidActionHandle;
-        vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
-        Matrix4 m_rmat4Pose;
-        CGLRenderModel *m_pRenderModel = nullptr;
-        std::string m_sRenderModelName;
-        bool m_bShowController;
-    };
-#endif
+
     enum EHand
     {
         Left = 0,
         Right = 1,
     };
-    //ControllerInfo_t m_rHand[2];
 
 private: // SDL bookkeeping
     SDL_Window *m_pCompanionWindow;
@@ -244,75 +213,6 @@ private: // OpenGL bookkeeping
 
     vr::VRActionSetHandle_t m_actionsetDemo = vr::k_ulInvalidActionSetHandle;
 };
-
-
-//---------------------------------------------------------------------------------------------------------------------
-// Purpose: Returns true if the action is active and had a rising edge
-//---------------------------------------------------------------------------------------------------------------------
-bool GetDigitalActionRisingEdge(vr::VRActionHandle_t action, vr::VRInputValueHandle_t *pDevicePath = nullptr )
-{
-    vr::InputDigitalActionData_t actionData;
-    vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle );
-    if (pDevicePath)
-    {
-        *pDevicePath = vr::k_ulInvalidInputValueHandle;
-        if (actionData.bActive)
-        {
-            vr::InputOriginInfo_t originInfo;
-            if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
-            {
-                *pDevicePath = originInfo.devicePath;
-            }
-        }
-    }
-    return actionData.bActive && actionData.bChanged && actionData.bState;
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-// Purpose: Returns true if the action is active and had a falling edge
-//---------------------------------------------------------------------------------------------------------------------
-bool GetDigitalActionFallingEdge(vr::VRActionHandle_t action, vr::VRInputValueHandle_t *pDevicePath = nullptr )
-{
-    vr::InputDigitalActionData_t actionData;
-    vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle );
-    if (pDevicePath)
-    {
-        *pDevicePath = vr::k_ulInvalidInputValueHandle;
-        if (actionData.bActive)
-        {
-            vr::InputOriginInfo_t originInfo;
-            if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
-            {
-                *pDevicePath = originInfo.devicePath;
-            }
-        }
-    }
-    return actionData.bActive && actionData.bChanged && !actionData.bState;
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-// Purpose: Returns true if the action is active and its state is true
-//---------------------------------------------------------------------------------------------------------------------
-bool GetDigitalActionState(vr::VRActionHandle_t action, vr::VRInputValueHandle_t *pDevicePath = nullptr )
-{
-    vr::InputDigitalActionData_t actionData;
-    vr::VRInput()->GetDigitalActionData(action, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle );
-    if (pDevicePath)
-    {
-        *pDevicePath = vr::k_ulInvalidInputValueHandle;
-        if (actionData.bActive)
-        {
-            vr::InputOriginInfo_t originInfo;
-            if (vr::VRInputError_None == vr::VRInput()->GetOriginTrackedDeviceInfo(actionData.activeOrigin, &originInfo, sizeof(originInfo)))
-            {
-                *pDevicePath = originInfo.devicePath;
-            }
-        }
-    }
-    return actionData.bActive && actionData.bState;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Outputs a set of optional arguments to debugging output, using
@@ -950,37 +850,6 @@ void CMainApplication::UpdateHMDMatrixPose()
     if ( !m_pHMD )
         return;
     vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
-#if 0
-    m_iValidPoseCount = 0;
-    m_strPoseClasses = "";
-    for ( int nDevice = 0; nDevice < vr::k_unMaxTrackedDeviceCount; ++nDevice )
-    {
-        if ( m_rTrackedDevicePose[nDevice].bPoseIsValid )
-        {
-            m_iValidPoseCount++;
-            m_rmat4DevicePose[nDevice] = ConvertSteamVRMatrixToMatrix4( m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking );
-            if (m_rDevClassChar[nDevice]==0)
-            {
-                switch (m_pHMD->GetTrackedDeviceClass(nDevice))
-                {
-                case vr::TrackedDeviceClass_Controller:        m_rDevClassChar[nDevice] = 'C'; break;
-                case vr::TrackedDeviceClass_HMD:               m_rDevClassChar[nDevice] = 'H'; break;
-                case vr::TrackedDeviceClass_Invalid:           m_rDevClassChar[nDevice] = 'I'; break;
-                case vr::TrackedDeviceClass_GenericTracker:    m_rDevClassChar[nDevice] = 'G'; break;
-                case vr::TrackedDeviceClass_TrackingReference: m_rDevClassChar[nDevice] = 'T'; break;
-                default:                                       m_rDevClassChar[nDevice] = '?'; break;
-                }
-            }
-            m_strPoseClasses += m_rDevClassChar[nDevice];
-        }
-    }
-
-    if ( m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid )
-    {
-        m_mat4HMDPose = m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-        m_mat4HMDPose.invert();
-    }
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -996,115 +865,6 @@ Matrix4 CMainApplication::ConvertSteamVRMatrixToMatrix4( const vr::HmdMatrix34_t
         );
     return matrixObj;
 }
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Create/destroy GL Render Models
-//-----------------------------------------------------------------------------
-CGLRenderModel::CGLRenderModel( const std::string & sRenderModelName )
-    : m_sModelName( sRenderModelName )
-{
-    m_glIndexBuffer = 0;
-    m_glVertArray = 0;
-    m_glVertBuffer = 0;
-    m_glTexture = 0;
-}
-
-
-CGLRenderModel::~CGLRenderModel()
-{
-    Cleanup();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Allocates and populates the GL resources for a render model
-//-----------------------------------------------------------------------------
-bool CGLRenderModel::BInit( const vr::RenderModel_t & vrModel, const vr::RenderModel_TextureMap_t & vrDiffuseTexture )
-{
-    // create and bind a VAO to hold state for this model
-    glGenVertexArrays( 1, &m_glVertArray );
-    glBindVertexArray( m_glVertArray );
-
-    // Populate a vertex buffer
-    glGenBuffers( 1, &m_glVertBuffer );
-    glBindBuffer( GL_ARRAY_BUFFER, m_glVertBuffer );
-    glBufferData( GL_ARRAY_BUFFER, sizeof( vr::RenderModel_Vertex_t ) * vrModel.unVertexCount, vrModel.rVertexData, GL_STATIC_DRAW );
-
-    // Identify the components in the vertex buffer
-    glEnableVertexAttribArray( 0 );
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof( vr::RenderModel_Vertex_t ), (void *)offsetof( vr::RenderModel_Vertex_t, vPosition ) );
-    glEnableVertexAttribArray( 1 );
-    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof( vr::RenderModel_Vertex_t ), (void *)offsetof( vr::RenderModel_Vertex_t, vNormal ) );
-    glEnableVertexAttribArray( 2 );
-    glVertexAttribPointer( 2, 2, GL_FLOAT, GL_FALSE, sizeof( vr::RenderModel_Vertex_t ), (void *)offsetof( vr::RenderModel_Vertex_t, rfTextureCoord ) );
-
-    // Create and populate the index buffer
-    glGenBuffers( 1, &m_glIndexBuffer );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_glIndexBuffer );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( uint16_t ) * vrModel.unTriangleCount * 3, vrModel.rIndexData, GL_STATIC_DRAW );
-
-    glBindVertexArray( 0 );
-
-    // create and populate the texture
-    glGenTextures(1, &m_glTexture );
-    glBindTexture( GL_TEXTURE_2D, m_glTexture );
-
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, vrDiffuseTexture.unWidth, vrDiffuseTexture.unHeight,
-        0, GL_RGBA, GL_UNSIGNED_BYTE, vrDiffuseTexture.rubTextureMapData );
-
-    // If this renders black ask McJohn what's wrong.
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-
-    GLfloat fLargest;
-    glGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &fLargest );
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, fLargest );
-
-    glBindTexture( GL_TEXTURE_2D, 0 );
-
-    m_unVertexCount = vrModel.unTriangleCount * 3;
-
-    return true;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Frees the GL resources for a render model
-//-----------------------------------------------------------------------------
-void CGLRenderModel::Cleanup()
-{
-    if( m_glVertBuffer )
-    {
-        glDeleteBuffers(1, &m_glIndexBuffer);
-        glDeleteVertexArrays( 1, &m_glVertArray );
-        glDeleteBuffers(1, &m_glVertBuffer);
-        m_glIndexBuffer = 0;
-        m_glVertArray = 0;
-        m_glVertBuffer = 0;
-    }
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Draws the render model
-//-----------------------------------------------------------------------------
-void CGLRenderModel::Draw()
-{
-    glBindVertexArray( m_glVertArray );
-
-    glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_2D, m_glTexture );
-
-    glDrawElements( GL_TRIANGLES, m_unVertexCount, GL_UNSIGNED_SHORT, 0 );
-
-    glBindVertexArray( 0 );
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
