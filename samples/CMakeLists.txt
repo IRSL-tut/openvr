@@ -248,5 +248,5 @@ add_subdirectory(hellovr_opengl)
 #add_subdirectory(helloworldoverlay)
 #add_subdirectory(tracked_camera_openvr_sample)
 
-add_subdirectory(test_irsl)
+add_subdirectory(irsl_test)
 # -----------------------------------------------------------------------------

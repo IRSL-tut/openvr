@@ -2,12 +2,11 @@
 #include <string>
 #include <cstdlib>
 #include <vector>
+#include <iostream>
 
 #include <SDL.h>
 #include <GL/glew.h>
 #include <SDL_opengl.h>
-
-#include <opencv2/imgcodecs.hpp>
 
 #ifndef _countof
 #define _countof(x) (sizeof(x)/sizeof((x)[0]))
@@ -179,7 +178,7 @@ void render()
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
     if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0 ) {
         printf("%s - SDL could not initialize! SDL Error: %s\n", __FUNCTION__, SDL_GetError());
@@ -333,16 +332,23 @@ int main()
         int gl_h = nHeight;
 
         unsigned char red = cntr++ % 0xFF;
+        std::vector<unsigned char> img(nWidth * nHeight * 3);
+        unsigned char *ptr = img.data();
 
-        cv::Mat hmd_img = cv::Mat(cv::Size(nWidth, nHeight), CV_8UC3, {red, 0, 0});
+        for(int i = 0; i < nHeight; i++) {
+            for(int j = 0; j < nWidth; j++) {
+                ptr[3*(i*nWidth + j)] = red;
+                ptr[3*(i*nWidth + j)+1] = 0;
+                ptr[3*(i*nWidth + j)+2] = 0;
+            }
+        }
         glBindTexture( GL_TEXTURE_2D, m_nResolveTextureId );
         glGetTexLevelParameteriv( GL_TEXTURE_2D , 0 , GL_TEXTURE_WIDTH , &gl_w );
         glGetTexLevelParameteriv( GL_TEXTURE_2D , 0 , GL_TEXTURE_HEIGHT, &gl_h );
         glTexSubImage2D( GL_TEXTURE_2D, 0,
-                         gl_w/2 - hmd_img.cols/2,
-                         gl_h/2 - hmd_img.rows/2,
-                         hmd_img.cols, hmd_img.rows,
-                         GL_RGB, GL_UNSIGNED_BYTE, hmd_img.data );
+                         gl_w/2 - nWidth/2, gl_h/2 - nHeight/2,
+                         nWidth, nHeight,
+                         GL_RGB, GL_UNSIGNED_BYTE, ptr );
         glBindTexture( GL_TEXTURE_2D, 0 );
 
         glFinish();
