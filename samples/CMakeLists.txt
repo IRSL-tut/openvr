@@ -50,12 +50,12 @@ set(SHARED_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shared)
 
 # Check that the steamVR SDK is installed 
 # (needed to prevent a segfault in OpenVR).
-if(CMAKE_HOST_UNIX)
-  find_file(OPENVRPATHS openvrpaths.vrpath PATHS $ENV{HOME}/.config/openvr "$ENV{HOME}/Library/Application Support/OpenVR/.openvr")
-  if(${OPENVRPATHS} MATCHES OPENVRPATHS-NOTFOUND)
-    message(FATAL_ERROR "${OPENVRPATHS} Please install SteamVR SDK to continue..")
-  endif()
-endif()
+#if(CMAKE_HOST_UNIX)
+#  find_file(OPENVRPATHS openvrpaths.vrpath PATHS $ENV{HOME}/.config/openvr "$ENV{HOME}/Library/Application Support/OpenVR/.openvr")
+#  if(${OPENVRPATHS} MATCHES OPENVRPATHS-NOTFOUND)
+#    message(FATAL_ERROR "${OPENVRPATHS} Please install SteamVR SDK to continue..")
+#  endif()
+#endif()
 
 # Default output directory.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin/${ARCH_TARGET})
@@ -242,10 +242,11 @@ endif()
 ## SUBDIRECTORIES ##
 
 add_subdirectory(hellovr_opengl)
-if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
-  add_subdirectory(hellovr_vulkan)
-endif()
-add_subdirectory(helloworldoverlay)
-add_subdirectory(tracked_camera_openvr_sample)
+#if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
+#  add_subdirectory(hellovr_vulkan)
+#endif()
+#add_subdirectory(helloworldoverlay)
+#add_subdirectory(tracked_camera_openvr_sample)
 
+add_subdirectory(test_irsl)
 # -----------------------------------------------------------------------------
